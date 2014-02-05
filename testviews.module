@@ -1,0 +1,200 @@
+<?php
+
+function testviews_views_api(){
+  return array(
+    'api' => 3,
+  );
+}
+  
+function testviews_menu(){
+  $menu = array();
+  $menu['lookup'] = array(
+    'title' => 'Lookup Form',
+    'description' => 'Looking thing up and rendering them',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('testviews_lookup_form'),
+    'access callback' => TRUE,
+    'type' => MENU_NORMAL_ITEM,
+    
+  );
+  $menu['save/%/%'] = array(
+    'title' => 'Save it',
+    'type' => MENU_CALLBACK,
+    'page callback' => 'testviews_save_db',
+    'page arguments' => array(1,2),
+    'access callback' => TRUE,
+  );
+  $menu['testbol'] = array(
+    'title' => 'Test bol',
+    'type' => MENU_NORMAL_ITEM,
+    'page callback' => 'testviews_testbol',
+    //'page arguments' => array('GET','/openapi/services/rest/catalog/v3/searchresults','?term=potter&offset=0&nrProducts=8&includeProducts=true&includeCategories=true&includeRefinements=false&categoryId=0','',''),
+    'access callback' => TRUE,
+  );
+  $menu['testpager'] = array(
+    'title' => 'Test Pager',
+    'type' => MENU_NORMAL_ITEM,
+    'page callback' => 'testviews_testpager',
+    //'page arguments' => array('GET','/openapi/services/rest/catalog/v3/searchresults','?term=potter&offset=0&nrProducts=8&includeProducts=true&includeCategories=true&includeRefinements=false&categoryId=0','',''),
+    'access callback' => TRUE,
+  );
+  return $menu;
+}
+function testviews_testpager(){
+  $total = 100;
+  $limit = 6;
+  
+  $current_page = pager_find_page();
+  pager_default_initialize($total, $limit, $element = 0);
+  $output = "current page is $current_page";
+  $start_index = $current_page*6;
+  $rows = array();
+  for($i = $start_index;$i < min($start_index + $limit,$total); $i++){
+    $rows[] = "$i  ";
+  }
+  $output .= theme('item_list',
+    array(
+      'items' => $rows,
+      'title' => 'Listing',
+    )
+  );
+  $output.= theme('pager');
+  return $output;
+
+}
+function testviews_testbol(){
+  //initialize the pager
+  // returns current page of pager; first page is 0
+  $current_page = pager_find_page();
+  $hits = bol_search("Harry Potter",$offset = 10*$current_page);
+  //dsm($hits);
+  //dsm($hits['results']);
+  
+  $items = array();
+  foreach($hits['results'] as $hit){
+    $items[] = theme('bol_item',array('item' => $hit));
+  }
+  $output['hits'] = array(
+    '#markup' => format_plural($hits['total_result_size'],'1 hit','@count hits'),
+  );
+  $output['top_pager'] = array(
+    '#theme' => 'pager',
+  );
+  
+  //currently limit is hardcoded value is 10
+  $limit =10;
+  pager_default_initialize($hits['total_result_size'], $limit, $element = 0);
+  $output['results'] = array(
+    '#theme' => 'item_list',
+    '#items' => $items,
+    '#type' => 'ul',
+    '#title' => 'Search Results',
+  );
+  
+  $output['bottom_pager'] = array(
+    '#theme' => 'pager',
+  );
+  //$output.= theme('pager');
+  return $output;
+}
+/**
+My own search form
+*/
+function testviews_lookup_form($form,&$form_state){
+  $form['keyword_textfield'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Keyword(s)'),
+    '#description' => t('Enter the keywords you want to look for'),
+    '#ajax' => array(
+      'wrapper' => 'div_results',
+      'callback' => 'testviews_lookup_callback',
+    ),
+  );
+  /*
+  $form['store_choice'] = array(
+      '#type' => 'radios',
+      '#title' => t('Store'),
+      '#description' => t('Select the store to search for the keywords.'),
+      '#options' => drupal_map_assoc(array('amazon','bol.com')),
+  );
+  */
+  $form['result'] = array(
+    '#type' => 'markup',
+    '#prefix' => '<div id="div_results">',
+    '#suffix' => '</div>',
+  );
+  
+  return $form;
+}
+//ajax callback function
+function testviews_lookup_callback($form,&$form_state){
+  $result_element  = $form['result'];
+  //dsm($form_state['store_choice']);
+  $result_element['#markup'] = 'Helaba<b>'.$form_state['values']['keyword_textfield'].'vvv</b>';
+  return $result_element;
+}
+/**
+Looks up id using service and saves it in db
+example service: amazon
+example id: asin
+*/
+function testviews_save_db($service,$id){
+  if($service == "amazon"){
+    $item = amazon_item_lookup($id);
+    dsm($item);
+    amazon_item_insert($item);
+  }
+}
+/**
+Trying to do the same, but with built-in search system
+*/
+function testviews_search_info(){
+  $info = array();
+  $info['title'] = t('Testviews Search');
+  return $info;
+}
+
+function testviews_search_execute($keys = NULL, $conditions = NULL){
+  //relay search to amazon
+  $amazon_items = amazon_search_simple_search($keys);
+  $hits = array();
+  foreach($amazon_items as $item){
+    //dsm($item);
+    //$user_comments = drupal_http_request($item['customerreviews_iframe']);
+    $hits[] = array(
+      'link' =>   $item['detailpageurl'],
+      'title' => 'Amazon '.$item['title'],
+      //'snippet' => $user_comments->data,
+      //'snippet' => $item['publicationyear'],
+      'snippet' => theme('amazon_item', 
+        array(
+          'item' => $item,
+        )
+      ),
+    );
+  }
+   //relay search to bol
+  $bol_items = bol_search($keys);
+  $hits = array();
+  foreach($bol_items as $item){
+    //dsm($item);
+    //$user_comments = drupal_http_request($item['customerreviews_iframe']);
+    dsm($item->{"Title"});
+    $hits[] = array(
+      'link' => $item->{"Urls"}->{"Main"},
+      'title' => $item->{"Title"},
+      //'snippet' => $user_comments->data,
+      //'snippet' => $item['publicationyear'],
+      'snippet' => theme('bol_item', 
+        array(
+          'item' => $item,
+        )
+      ),
+      'extra' => array(
+        'save' => l('save this','save/amazon/'.$item['asin']),
+      ),
+    );
+  }
+  return $hits;
+
+}

@@ -1,0 +1,11 @@
+name = "Test Views"
+description = "Creates a table and makes it accessable to views"
+package = "0Development"
+core = 7.x
+
+
+;node_reference is useful but not required
+;dependencies[] = node_reference
+
+files[] = taxcopy.module
+
