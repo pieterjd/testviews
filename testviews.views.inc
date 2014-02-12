@@ -68,7 +68,7 @@ function testviews_views_data(){
       'base' => 'node',
       'base field' => 'nid',
       'handler' => 'views_handler_relationship',
-      'title' => t('Title shown when adding the relationship'),
+      'title' => t('Add node relationship'),
       'help' => t('Help shown on this relationship'),
     ),
     
@@ -82,7 +82,7 @@ function testviews_views_data(){
       'base' => 'users',
       'base field' => 'uid',
       'handler' => 'views_handler_relationship',
-      'title' => t('Title shown when adding the user relationship'),
+      'title' => t('Add user relationship'),
       'help' => t('Help shown on this user relationship'),
     ),
     
