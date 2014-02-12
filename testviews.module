@@ -38,7 +38,99 @@ function testviews_menu(){
     //'page arguments' => array('GET','/openapi/services/rest/catalog/v3/searchresults','?term=potter&offset=0&nrProducts=8&includeProducts=true&includeCategories=true&includeRefinements=false&categoryId=0','',''),
     'access callback' => TRUE,
   );
+  $menu['dateform'] = array(
+    'title' => 'Form with date element',
+    'description' => 'Date Form',
+    'type' => MENU_NORMAL_ITEM,
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('testviews_dateform'),
+    'access callback' => TRUE,
+  );
+  //autocomplete for node titles
+  $menu['node/autocomplete'] = array(
+      'title' => 'Autocomplete for node title',
+      'page callback' => 'testviews_node_autocomplete',
+      'access callback' => TRUE,  //or whatever permission makes sense
+      'type' => MENU_CALLBACK,
+  );
   return $menu;
+}
+
+
+/**
+* based on https://drupal.org/node/854216
+*/
+function testviews_node_autocomplete($string){
+  $matches = array();
+  $result = db_select('node', 'n')
+    ->fields('n', array('title','nid'))
+    ->condition('title', '%' . db_like($string) . '%', 'LIKE')
+    ->execute(); 
+  // save the query to matches
+  foreach ($result as $row) {
+    $matches[$row->nid] = check_plain($row->title);
+  }
+  // Return the result to the form in json
+  drupal_json_output($matches);
+
+}
+
+function testviews_dateform($form,&$form_state){
+  $form['start_date'] = array(
+    '#type' => 'date_popup',
+    '#title' => t('Start of lending'),
+    '#default_value' => date('Y-m-d H:i'),
+    '#required' => TRUE,
+    
+  );
+  $form['end_date'] = array(
+    '#type' => 'date_popup',
+    '#title' => t('end of lending'),
+    '#default_value' => date('Y-m-d H:i',strtotime('+1 week')),
+    '#required' => TRUE,
+    
+  );
+  $form['user'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Person who is lending.'),
+    '#required' => TRUE,
+    //autocomplete for user
+    '#autocomplete_path' => 'user/autocomplete',
+  );
+  $form['node'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Item to lent.'),
+    '#required' => TRUE,
+    //autocomplete for node title
+    '#autocomplete_path' => 'node/autocomplete',
+  );
+  $form['submit'] = array(
+    '#type' => 'submit',
+    '#value' => t('Lend it!'),
+  );
+  
+  
+  return $form;
+}
+
+function testviews_dateform_validate($form, &$form_state) {
+  if(strtotime($form_state['values']['start_date']) > strtotime($form_state['values']['end_date'])){
+    form_set_error('end_date',t('Must be later than start date.'));
+  }
+}
+
+function testviews_dateform_submit($form, &$form_state) {
+  dsm($form_state['values']);
+  db_insert('testviews')
+    ->fields(array(
+      'loan_time' => strtotime($form_state['values']['start_date']),
+      'expected_return' => strtotime($form_state['values']['end_date']),
+      'nid' => $form_state['values']['node'],
+      'uid' => user_load_by_name($form_state['values']['user'])->uid,
+    ))
+    ->
+    execute();
+    drupal_set_message("Saved.");
 }
 function testviews_testpager(){
   $total = 100;
