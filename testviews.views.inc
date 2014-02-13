@@ -19,7 +19,13 @@ function testviews_views_data(){
       'handler' => 'views_handler_sort_date',
     ),
     'filter' => array(
-      'handler' => 'views_handler_filter_date',
+      'handler' => 'date_views_filter_handler',
+      'is date' => TRUE,
+    ),
+    'argument' => array(
+      'handler' => 'date_views_argument_handler',
+      'empty field name' => t('Undated'),
+      'is date' => TRUE,
     ),
   );
   
@@ -27,7 +33,7 @@ function testviews_views_data(){
     'title' => t('Expected return date'),
     'help' => t('Loan Just a timestamp field.'),
     'field' => array(
-      'handler' => 'views_handler_field_date',
+      'handler' => 'date_views_filter_handler',
       'click sortable' => TRUE,
     ),
     'sort' => array(
@@ -35,6 +41,12 @@ function testviews_views_data(){
     ),
     'filter' => array(
       'handler' => 'views_handler_filter_date',
+      'is date' => TRUE,
+    ),
+    'argument' => array(
+      'handler' => 'date_views_argument_handler',
+      'empty field name' => t('Undated'),
+      'is date' => TRUE,
     ),
   );
   
@@ -42,7 +54,7 @@ function testviews_views_data(){
     'title' => t('Real return date'),
     'help' => t('Loan Just a timestamp field.'),
     'field' => array(
-      'handler' => 'views_handler_field_date',
+      'handler' => 'date_views_filter_handler',
       'click sortable' => TRUE,
     ),
     'sort' => array(
@@ -50,6 +62,12 @@ function testviews_views_data(){
     ),
     'filter' => array(
       'handler' => 'views_handler_filter_date',
+      'is date' => TRUE,
+    ),
+    'argument' => array(
+      'handler' => 'date_views_argument_handler',
+      'empty field name' => t('Undated'),
+      'is date' => TRUE,
     ),
   );
   
