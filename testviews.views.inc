@@ -1,4 +1,6 @@
 <?php
+
+
 function testviews_views_data(){
   $data['testviews']['table']['group'] = t('Test Views Table');
   //define as base table
@@ -7,7 +9,10 @@ function testviews_views_data(){
     'title' => t('Test Views table'),
     'help' => t('The Test Views Table Help Text :DDD'),
   );
-  
+  $data['testviews']['table']['join']['node'] = array(
+    'left_field' => 'nid',
+    'field' => 'nid',
+  );
   $data['testviews']['loan_time'] = array(
     'title' => t('Loan Timestamp field'),
     'help' => t('Loan Just a timestamp field.'),
