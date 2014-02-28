@@ -5,7 +5,14 @@ function testviews_views_api(){
     'api' => 3,
   );
 }
-  
+ 
+ /**
+ * Implement hook_date_api_tables().
+ */ 
+ function testviews_date_api_tables(){
+  return array('testviews');
+ }
+ 
 function testviews_menu(){
   $menu = array();
   $menu['lookup'] = array(
@@ -44,6 +51,14 @@ function testviews_menu(){
     'type' => MENU_NORMAL_ITEM,
     'page callback' => 'drupal_get_form',
     'page arguments' => array('testviews_dateform'),
+    'access callback' => TRUE,
+  );
+  $menu['returnform'] = array(
+    'title' => 'Return Form',
+    'description' => 'Return Form',
+    'type' => MENU_NORMAL_ITEM,
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('testviews_returnform'),
     'access callback' => TRUE,
   );
   //autocomplete for node titles
@@ -120,7 +135,7 @@ function testviews_dateform_validate($form, &$form_state) {
 }
 
 function testviews_dateform_submit($form, &$form_state) {
-  dsm($form_state['values']);
+  //dsm($form_state['values']);
   db_insert('testviews')
     ->fields(array(
       'loan_time' => strtotime($form_state['values']['start_date']),
@@ -130,6 +145,37 @@ function testviews_dateform_submit($form, &$form_state) {
     ))
     ->
     execute();
+    drupal_set_message("Saved.");
+}
+
+function testviews_returnform($form,&$form_state){
+  $form['node'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Item to return.'),
+    '#required' => TRUE,
+    //autocomplete for node title
+    '#autocomplete_path' => 'node/autocomplete',
+  );
+  
+  $form['submit'] = array(
+    '#type' => 'submit',
+    '#value' => t('Return it!'),
+  );
+  
+  
+  return $form;
+}
+
+function testviews_returnform_submit($form, &$form_state) {
+  //dsm($form_state['values']);
+  db_update('testviews')
+    ->fields(array(
+      'observed_return' => time(),
+      
+    ))
+    ->condition('observed_return', NULL)
+    ->condition('nid',$form_state['values']['node'])
+    ->execute();
     drupal_set_message("Saved.");
 }
 function testviews_testpager(){
