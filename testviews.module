@@ -75,7 +75,8 @@ function testviews_menu(){
 /**
 * based on https://drupal.org/node/854216
 */
-function testviews_node_autocomplete($string){
+function testviews_node_autocomplete($titles_typed =''){
+  /*
   $matches = array();
   $result = db_select('node', 'n')
     ->fields('n', array('title','nid'))
@@ -83,11 +84,59 @@ function testviews_node_autocomplete($string){
     ->execute(); 
   // save the query to matches
   foreach ($result as $row) {
+    $key = check_plain($row->title) . ' ('. .')'
     $matches[$row->nid] = check_plain($row->title);
   }
   // Return the result to the form in json
   drupal_json_output($matches);
+  */
+  //ripped from taxonomy.module :)
+  // If the request has a '/' in the search text, then the menu system will have
+  // split it into multiple arguments, recover the intended $tags_typed.
+  $args = func_get_args();
+  // Shift off the $field_name argument.
+  array_shift($args);
+  $tags_typed = implode('/', $args);
 
+ 
+
+  // The user enters a comma-separated list of tags. We only autocomplete the last tag.
+  $titles_typed = drupal_explode_tags($titles_typed);
+  $title_last = drupal_strtolower(array_pop($titles_typed));
+
+  $matches = array();
+  if ($title_last != '') {
+
+    $query = db_select('node', 'n');
+    //tags not necessary
+    /*
+    $query->addTag('translatable');
+    $query->addTag('term_access');
+    */
+    // Do not select already entered terms.
+    if (!empty($titles_typed)) {
+      $query->condition('n.title', $titles_typed, 'NOT IN');
+    }
+    // Select rows that match by term name.
+    $titles_return = $query->fields('n', array('nid', 'title'))
+      ->condition('n.title', '%' . db_like($title_last) . '%', 'LIKE')
+      ->range(0, 10)
+      ->execute()
+      ->fetchAllKeyed();
+
+    $prefix = count($titles_typed) ? drupal_implode_tags($titles_typed) . ', ' : '';
+
+    foreach ($titles_return as $nid => $title) {
+      $t = $title;
+      // Term names containing commas or quotes must be wrapped in quotes.
+      if (strpos($title, ',') !== FALSE || strpos($title, '"') !== FALSE) {
+        $t = '"' . str_replace('"', '""', $title) . '"';
+      }
+      $matches[$prefix . $t] = check_plain($title);
+    }
+  }
+
+  drupal_json_output($matches);
 }
 
 function testviews_dateform($form,&$form_state){
@@ -136,16 +185,29 @@ function testviews_dateform_validate($form, &$form_state) {
 
 function testviews_dateform_submit($form, &$form_state) {
   //dsm($form_state['values']);
-  db_insert('testviews')
+  //get entered titles
+  $titles = explode(',',$form_state['values']['node']);
+  //dsm($titles);
+  //iterate over the titles
+  foreach($titles as $title){
+    //retrieve node id
+    //should use entityquery but only need nid, not the attached fields
+    $nid = db_select('node', 'n')
+      ->condition('n.title', trim($title))
+      ->fields('n', array('nid'))
+      ->execute()
+      ->fetchField();
+    //dsm("found $nid");
+    db_insert('testviews')
     ->fields(array(
       'loan_time' => strtotime($form_state['values']['start_date']),
       'expected_return' => strtotime($form_state['values']['end_date']),
-      'nid' => $form_state['values']['node'],
+      'nid' => $nid,
       'uid' => user_load_by_name($form_state['values']['user'])->uid,
     ))
-    ->
-    execute();
-    drupal_set_message("Saved.");
+    ->execute();
+  }
+  drupal_set_message("Saved.");
 }
 
 function testviews_returnform($form,&$form_state){
